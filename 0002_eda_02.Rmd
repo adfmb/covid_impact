@@ -4,7 +4,9 @@ subtitle: "Gráficas 1era Parte: Absolutos"
 output: html_notebook
 ---
 
-```{r}
+```{r,include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(include = T)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -21,8 +23,54 @@ all_gather02%>%
   )
 ```
 
-# Nacionales
+# Nacionales {.tabset}
 
+## Poblaciones por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+all_gather02_poblnl<-all_gather02%>%
+               filter(!Region%in%"Nacional")%>%
+               distinct(Region,TOTALES)%>%
+               arrange(desc(TOTALES))%>%
+               mutate(
+                 Region00=Region,
+                 Region=as.factor(
+                   paste0(
+                     letters[1:nrow(.)],".",
+                     Region)),
+                 prop=round(TOTALES/sum(TOTALES),3)
+               )
+gg00<-ggplot(all_gather02_poblnl,#paste0(vartmp,"!=-99")), 
+             aes(x=Region, group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y="prop")) + 
+      theme(
+        axis.text.x = element_text(angle = 90, hjust = 1)#,
+  # axis.text.y = element_blank()#,
+  # axis.ticks = element_blank()
+  )+
+    # scale_y_discrete(
+    scale_y_continuous(
+    name="% de la Población Nacional",
+    breaks=seq(0,.2,.025),
+    labels=paste0(seq(0,.2,.025)*100," %")
+  )+
+      labs(title = "Población por Región")
+)
+```
+
+```{r}
+all_gather02_poblnl%>%
+  mutate(
+    Poblacion=format(TOTALES, nsmall=1, big.mark=","),
+    Porcentaje=paste0(prop*100," %")
+  )%>%
+  select(-prop,-TOTALES,-Region)%>%
+  rename(Region=Region00)
+```
+
+## Confirmados, Hospitalizados, Recuperados, Cuidados Intensivos & Fallecidos por Día
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
 vartmp<-"cifras"
 gg00<-ggplot(all_gather02%>%
@@ -46,6 +94,7 @@ ggplotly(
 ```
 
 
+## Confirmados vs Hospitalizados, Recuperados, Cuidados Intensivos, Fallecidos
 
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
 vartmp_x<-"ConfirmadosEstimados"
@@ -69,6 +118,9 @@ ggplotly(
       labs(title = "Confirmados (estimados) vs las otras Métricas Nacionales")
 )
 ```
+- De manera general, pareciera que a medida que se ha disparado la cantidad de **Confirmados**, los indicadores que más rápido crecen son los **Hospitalizados** & **Recuperados**
+
+- Una interpretación de lo anterior, podría ser que, a nivel Nacional, el hecho de que no haya tanta cercanía entre esas métricas y las de Fallecidos, podria ser un buen indicador, al menos en términos absolutos y ya faltará ver por Región y en términos relativos
 
 # Por Región {.tabset}
 
@@ -99,6 +151,10 @@ ggplotly(
 )
 # )
 ```
+
+- A nivel Nacional, habíamos visto que, conforme crecían los **Confirmados**, los **Hospitalizados** & los **Recuperados** estaban prácticamente al mismo nivel, aunque ligéramente superior el primero
+
+- Es interesante ver, cómo por Región
 
 ## Confirmados por dìa & por Región 
 ```{r,fig.width=10,fig.height=7,fig.align='left'}

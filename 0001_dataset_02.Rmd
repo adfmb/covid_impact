@@ -5,6 +5,8 @@ output: html_notebook
 ---
 
 ```{r}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(include = T)
 library(dplyr)
 library(tidyr)
 ```
