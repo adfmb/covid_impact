@@ -1,0 +1,176 @@
+---
+title: "EDA - 03"
+subtitle: "Gráficas 2da Parte: Relativos"
+output: html_notebook
+---
+
+```{r,include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(include = T)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+```
+
+```{r}
+if(!exists("all_gather02")){
+  all_gather02<-readRDS("data/tasas_diarias_x_region_02.rds")
+}
+```
+
+# Nacionales {.tabset}
+
+## Poblaciones por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+all_gather02_poblnl<-all_gather02%>%
+               filter(!Region%in%"Nacional")%>%
+               distinct(Region,TOTALES)%>%
+               arrange(desc(TOTALES))%>%
+               mutate(
+                 Region00=Region,
+                 Region=as.factor(
+                   paste0(
+                     letters[1:nrow(.)],".",
+                     Region)),
+                 prop=round(TOTALES/sum(TOTALES),3)
+               )
+gg00<-ggplot(all_gather02_poblnl,#paste0(vartmp,"!=-99")), 
+             aes(x=Region, group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y="prop")) + 
+      theme(
+        axis.text.x = element_text(angle = 90, hjust = 1)#,
+  # axis.text.y = element_blank()#,
+  # axis.ticks = element_blank()
+  )+
+    # scale_y_discrete(
+    scale_y_continuous(
+    name="% de la Población Nacional",
+    breaks=seq(0,.2,.025),
+    labels=paste0(seq(0,.2,.025)*100," %")
+  )+
+      labs(title = "Población por Región")
+)
+```
+
+```{r}
+all_gather02_poblnl%>%
+  mutate(
+    Poblacion=format(TOTALES, nsmall=1, big.mark=","),
+    Porcentaje=paste0(prop*100," %")
+  )%>%
+  select(-prop,-TOTALES,-Region)%>%
+  rename(Region=Region00)
+```
+
+# Por Región {.tabset}
+
+## Confirmados vs Recuperados, Fallecidos
+```{r,fig.width=10,fig.height=10,fig.align='left'}
+vartmp_x<-"tasa_conf_tot"
+vartmp<-"cifras"
+gg00<-ggplot(all_gather02%>%
+               select(Region,mesdia,tasa_conf_tot,tasa_fall_conf,tasa_recup_conf)%>%
+               filter(!Region%in%c("Nacional"))%>%
+               rename(Region00=Region)%>%
+               left_join(
+                 all_gather02_poblnl%>%
+                   select(Region,Region00)
+               )%>%
+               # filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               )%>%
+               gather(metrica,cifras,-one_of(c("Region00","Region","mesdia",vartmp_x)))%>%
+               filter_(.dots = paste0(vartmp," >= 0")),#paste0(vartmp,"!=-99")), 
+             aes(colour=metrica,group=1)) +
+  facet_wrap(~Region,scales = "free",nrow = 4) +
+  theme(strip.background = element_blank(), strip.placement = "outside")
+# print(
+ggplotly(
+    gg00 +
+      geom_point(aes_string(x=vartmp_x,y=vartmp)) + 
+      theme_void() + theme(legend.position="none")+
+      labs(title = "Confirmados (estimados) vs las otras Métricas por Región")
+      # theme(axis.text.x = element_text(angle = 90, hjust = 1))
+)
+# )
+```
+
+- Todas las tasas de fallecimiento son muy parecidas oscilando entre el **~0.6% - ~0.9%**
+
+- En prácticamente todas las regiones se observa que a medida que aumenta la tasa de infectados, aumentan también las de recuperados & la de personas fallecidas, excpeto en las 2 regiones con menos población: **`Ceuta & Melilla`**, en donde ambos indicadores se **van para abajo** cuando la **tasa de infectados aumenta**
+
+## Tasa de Confirmados por dìa & por Región 
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"tasa_conf_tot"
+gg00<-ggplot(all_gather02%>%
+               select(Region,mesdia,tasa_conf_tot,tasa_fall_conf,tasa_recup_conf)%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+
+## Tasa de Recuperados por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"tasa_recup_conf"
+ggg00<-ggplot(all_gather02%>%
+               select(Region,mesdia,tasa_conf_tot,tasa_fall_conf,tasa_recup_conf)%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+- Las tasas de recuperados más altas las vemos en las Regiones con menos población
+
+- Las tres Regiones mayor pobladas, sí presentan mejorías en la tasa de recuperación conforme aumenta el tiempo, aunque es más lento
+
+
+## Tasa de Fallecidos por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"tasa_fall_conf"
+ggg00<-ggplot(all_gather02%>%
+               select(Region,mesdia,tasa_conf_tot,tasa_fall_conf,tasa_recup_conf)%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+- En general, en todas las regiones se observa una tendencia creciente de la tasa de fallecimientos, conforme aumenta el tiempo
+
+- Esto puede deberse a que, probablemente, la cantidad de contagiados es de activos y no acumulados y, por lo tanto, el denominador va disminuyendo, mientras que sí se van acumulando los casos de personas fallecidas.
+
