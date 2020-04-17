@@ -1,0 +1,43 @@
+---
+title: "Tasas %"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+if(!exists("all_gather")){
+  all_gather<-readRDS("data/contabilizaciones_diarias_x_region.rds")
+}
+all_gather00<-all_gather%>%
+  select(-starts_with("Country"),-anio,-mes,-dia)
+all_gather00
+```
+# Valores especiales
+
+```{r}
+all_gather00<-all_gather00%>%
+  mutate_at(
+    vars("ConfirmadosEstimados","CuidadosIntensivos","Fallecidos","Hospitalizados","Recuperados"),
+    function(x){ x[is.na(x)]<- -778899; return(x)}
+  )
+
+sum(is.na(all_gather)); sum(is.na(all_gather00)); sum(all_gather00==-778899)
+```
+
+
+## Confirmados / Totales 
+```{r}
+all_gather00<-all_gather00%>%
+  mutate(
+    tasa_conf_tot=if_else(ConfirmadosEstimados!=-778899 & !TOTALES%in%c(0,-778899),round(ConfirmadosEstimados/TOTALES,4)),
+    tasa_conf_tot=if_else(ConfirmadosEstimados!=-778899 & !TOTALES%in%c(0,-778899),round(ConfirmadosEstimados/TOTALES,4))
+    
+  )
+```
+
+
+
