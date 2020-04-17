@@ -1,0 +1,118 @@
+---
+title: "EDA - 05"
+subtitle: "Gráficas 2da Parte: Relativos con confirmados acumulados"
+output: html_notebook
+---
+
+```{r,include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(include = T)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+```
+
+```{r}
+# Matrices de transición entre Regiones
+if(!exists("all_gather03")){
+  all_gather03<-readRDS("data/tasas_diarias_x_region_03.rds")
+}
+```
+
+
+
+# Por Región {.tabset}
+
+## Confirmados vs Recuperados, Fallecidos
+```{r,fig.width=10,fig.height=10,fig.align='left'}
+vartmp_x<-"tasa_conf_tot_02"
+vartmp<-"cifras"
+gg00<-ggplot(all_gather03%>%
+               select(Region00,Region,mesdia,tasa_conf_tot_02,tasa_fall_conf_02,tasa_recup_conf_02)%>%
+               filter(!Region%in%c("Nacional"))%>%
+               # rename(Region00=Region)%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               )%>%
+               gather(metrica,cifras,-one_of(c("Region00","Region","mesdia",vartmp_x)))%>%
+               filter_(.dots = paste0(vartmp," >= 0")),#paste0(vartmp,"!=-99")), 
+             aes(colour=metrica,group=1)) +
+  facet_wrap(~Region,scales = "free",nrow = 4) +
+  theme(strip.background = element_blank(), strip.placement = "outside")
+# print(
+ggplotly(
+    gg00 +
+      geom_point(aes_string(x=vartmp_x,y=vartmp)) + 
+      theme_void() + theme(legend.position="none")+
+      labs(title = "Confirmados (estimados) vs las otras Métricas por Región")
+      # theme(axis.text.x = element_text(angle = 90, hjust = 1))
+)
+# )
+```
+
+## Tasa de Confirmados por dìa & por Región 
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"tasa_conf_tot_02"
+gg00<-ggplot(all_gather03%>%
+               select(Region00,Region,mesdia,tasa_conf_tot_02,tasa_fall_conf_02,tasa_recup_conf_02)%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+
+## Tasa de Recuperados por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"tasa_recup_conf_02"
+ggg00<-ggplot(all_gather03%>%
+               select(Region00,Region,mesdia,tasa_conf_tot_02,tasa_fall_conf_02,tasa_recup_conf_02)%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+- Las tasas de recuperados más altas las vemos en las Regiones con menos población
+
+- Las tres Regiones mayor pobladas, sí presentan mejorías en la tasa de recuperación conforme aumenta el tiempo, aunque es más lento
+
+
+## Tasa de Fallecidos por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"tasa_fall_conf_02"
+ggg00<-ggplot(all_gather03%>%
+               select(Region00,Region,mesdia,tasa_conf_tot_02,tasa_fall_conf_02,tasa_recup_conf_02)%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
