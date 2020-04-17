@@ -1,0 +1,66 @@
+---
+title: "EDA - 04"
+subtitle: "Update para Confirmados acumulados & tasas"
+output: html_notebook
+---
+
+```{r,include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(include = T)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+```
+
+```{r}
+if(!exists("all_gather02")){
+  all_gather02<-readRDS("data/tasas_diarias_x_region_02.rds")
+}
+```
+
+# Dataset para comparar tasas entre Regiones
+
+```{r}
+# Matrices de transición entre Regiones
+all_gather02_poblnl<-all_gather02%>%
+               filter(!Region%in%"Nacional")%>%
+               distinct(Region,TOTALES)%>%
+               arrange(desc(TOTALES))%>%
+               mutate(
+                 Region00=Region,
+                 Region=as.factor(
+                   paste0(
+                     letters[1:nrow(.)],".",
+                     Region)),
+                 prop=round(TOTALES/sum(TOTALES),3)
+               )
+
+all_gather03<-all_gather02%>%
+  select(Region,mesdia,TOTALES,ConfirmadosEstimados,Recuperados,Fallecidos,tasa_conf_tot,tasa_fall_conf,tasa_recup_conf)%>%
+  filter(!Region%in%c("Nacional"))%>%
+  rename(Region00=Region)%>%
+  mutate(
+    acumconfirmados_aprox=(ConfirmadosEstimados!=-99)*ConfirmadosEstimados + (Recuperados!=-99)*Recuperados + (Fallecidos!=-99)*Fallecidos,
+    
+    tasa_conf_tot_02=if_else(acumconfirmados_aprox!=-99 & !TOTALES%in%c(0,-99),round(acumconfirmados_aprox/TOTALES,4),-99),
+    
+    tasa_recup_conf_02=if_else(Recuperados!=-99 & !acumconfirmados_aprox%in%c(0,-99),round(Recuperados/acumconfirmados_aprox,4),-99),
+    
+    tasa_fall_conf_02=if_else(Fallecidos!=-99 & !acumconfirmados_aprox%in%c(0,-99),round(Fallecidos/acumconfirmados_aprox,4),-99)
+  )%>%
+  # select(-TOTALES,-ConfirmadosEstimados,-Recuperados,-Fallecidos,-tasa_conf_tot,-tasa_fall_conf,-tasa_recup_conf)%>%
+  left_join(
+    all_gather02_poblnl%>%
+      select(Region,Region00,prop)
+    )
+
+all_gather03%>%
+  group_by(acumconfirmados_aprox,ConfirmadosEstimados)%>%
+  summarise(n=n())
+
+saveRDS(all_gather03,"data/tasas_diarias_x_region_03.rds")
+  
+all_gather03
+```
+
