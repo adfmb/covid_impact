@@ -131,12 +131,17 @@ vartmp<-"cifras"
 gg00<-ggplot(all_gather02%>%
                select(-TOTALES,-starts_with("tasa_"),-starts_with("gap_"))%>%
                filter(!Region%in%c("Nacional"))%>%
+               rename(Region00=Region)%>%
+               left_join(
+                 all_gather02_poblnl%>%
+                   select(Region,Region00)
+               )%>%
                # filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
                mutate(
                  mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
                  Region=as.factor(Region)
                )%>%
-               gather(metrica,cifras,-one_of(c("Region","mesdia",vartmp_x)))%>%
+               gather(metrica,cifras,-one_of(c("Region00","Region","mesdia",vartmp_x)))%>%
                filter_(.dots = paste0(vartmp," >= 0")),#paste0(vartmp,"!=-99")), 
              aes(colour=metrica,group=1)) +
   facet_wrap(~Region,scales = "free",nrow = 4) +
@@ -154,7 +159,9 @@ ggplotly(
 
 - A nivel Nacional, habíamos visto que, conforme crecían los **Confirmados**, los **Hospitalizados** & los **Recuperados** estaban prácticamente al mismo nivel, aunque ligéramente superior el primero
 
-- Es interesante ver, cómo por Región
+- Sin embargo, es interesante ver, cómo por Región, los comportamientos varían de vez en vez
+
+- Por ejemplo, en `Madrid`, la **tercera Región más poblada**, esto se revierte, es decir, la cantidad de **Hospitalizados** parece ser significativamente **inferior** a la de **Recuperados** conforme aumentan las cantidades de **Infectados**
 
 ## Confirmados por dìa & por Región 
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
@@ -175,6 +182,7 @@ ggplotly(
 )
 ```
 
+- En general, **comportamientos muy parecidos** entre las regiones, siendo **`Madrid`** la Región con más infectados hasta un punto de **785,741** casos *vs* el segundo lugar que lo tiene **`Cataluña`** a pesar que ésta tiene al **16%** de la población en comparación con el **14%** que representa la que tiene a la capital del país.
 
 ## Hospitalizados por dìa & por Región 
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
@@ -196,6 +204,11 @@ ggplotly(
 ```
 
 
+- En general, **comportamientos muy parecidos** entre las regiones, **excepto `Madrid`**.
+
+- Para el **30 de marzo**, Madrid alentó el aumento en sus hospitalizados, al punto que para el **1 de abril** empezó un **descenso importante**
+
+- Esto contrasta con el comportamiento en **Cataluña**, donde es evidente el aceleramiento en la cantidad de hospitalzados, a pesar que **`Madrid`** tiene *más cantidad de infectados* y *menos población*
 
 ## Recuperados por dìa & por Región
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
@@ -217,6 +230,8 @@ ggplotly(
 ```
 
 
+- En general, **comportamientos muy parecidos** entre las regiones, siendo **`Madrid`** la Región con más recuperados, probablente fruto de tener también más infectados
+
 ## Cuidados Intensivos por dìa & por Región
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
 vartmp<-"CuidadosIntensivos"
@@ -236,6 +251,8 @@ ggplotly(
 )
 ```
 
+- Comportamiento muy parecido al de **Hospitalizados**, lo cual hace sentido pues los que llegan a **Cuidadis Intensivos** tuvieron que haber pasado antes por seer *hospitalizados*
+
 ## Fallecidos por dìa & por Región
 ```{r,fig.width=10,fig.height=7,fig.align='left'}
 vartmp<-"Fallecidos"
@@ -254,3 +271,5 @@ ggplotly(
       labs(title = paste0(vartmp," por día & por Región"))
 )
 ```
+
+- En general, **comportamientos muy parecidos** entre las regiones y también al observado en los **Recuperados**, siendo **`Madrid`** la Región que presenta más casos de personas que degraciadamente han perdido la vida, probablemente fruto también de tener más infectados
