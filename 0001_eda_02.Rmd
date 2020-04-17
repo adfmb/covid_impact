@@ -1,0 +1,158 @@
+---
+title: "EDA"
+subtitle: "Registros por fecha"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+lista_archivos00<-list.files("data/")
+lista_archivos01<-lista_archivos00[grepl("Copia de Dataset Data For Hope - A2 -",lista_archivos00)]
+lista_datasets<-list()
+for (i in 1:length(lista_archivos01)){
+  # i<-6
+  namefiletmp<-lista_archivos01[i]
+  print(namefiletmp)
+  filetmp<-read.csv(paste0("data/",namefiletmp),header = T)
+  namefiletmp<-gsub("Copia de Dataset Data For Hope - A2 - ","",namefiletmp)
+  namefiletmp<-gsub(" ","",namefiletmp)
+  namefiletmp<-gsub("\\*","",namefiletmp)
+  namefiletmp<-gsub(".csv","02.rds",namefiletmp)
+  
+  if(!namefiletmp%in%"TOTALES02.rds"){
+    print("guardando en lista_datasets")
+    lista_datasets[[sub(".rds","",namefiletmp)]]<-filetmp
+  }
+  
+  
+  saveRDS(filetmp,paste0("data/",namefiletmp))
+}
+
+names(lista_datasets)
+```
+
+# Gather 
+
+## Prueba
+```{r}
+i<-1
+datanametmp<-names(lista_datasets)[i]
+datatmp<-lista_datasets[[datanametmp]]%>%
+  mutate(
+    Region=if_else(Region=="","Nacional",as.character(Region))
+  )
+
+# write.csv(datatmp,"data/datatmp.csv",row.names = F)
+# datatmp[4:ncol(datatmp)]<-lapply(datatmp[4:ncol(datatmp)], function(x){as.numeric(as.character(x))})
+gathertmp<-datatmp%>%
+  gather(fecha,vartmp,-Country_EN,-Country_ES,-Region);gathertmp
+```
+
+- El `gather` ya no saca el `warning`
+
+- Comprobado en `Copia de Dataset Data For Hope - A2` que el `datatmp` ahora sí coincide con la hoja de Confirmados*Estimados
+
+
+
+## Agregando todas las bases
+```{r}
+library(lubridate)
+list_gather<-list()
+datatotales<-readRDS("data/TOTALES02.rds")%>%
+      mutate(
+        Region=if_else(Region=="","Nacional",as.character(Region))
+      )
+
+for(i in 1:length(lista_datasets)){
+  # i<-4
+  print("-----------")
+  datanametmp<-names(lista_datasets)[i]
+  print(datanametmp)
+  
+  if(datanametmp %in% c("ConfirmadosEstimados02","Recuperados02","Fallecidos02")){
+    datatmp<-lista_datasets[[datanametmp]]%>%
+      mutate(
+        Region=if_else(Region=="","Nacional",as.character(Region))
+      )
+    
+    gathertmp<-datatmp%>%
+      gather(fecha,vartmp,-Country_EN,-Country_ES,-Region)%>%
+      mutate(
+        anio=year(as.POSIXlt(gsub("X","",fecha), format="%Y.%m.%d")),
+        mes=month(as.POSIXlt(gsub("X","",fecha), format="%Y.%m.%d")),
+        dia=day(as.POSIXlt(gsub("X","",fecha), format="%Y.%m.%d")),
+        fh_amd= 10000*anio + 100*mes + dia
+      )%>%
+      # group_by(fecha,fh_amd)%>%
+      # summarise(
+      #   n=n()
+      # )%>%
+       rename_(.dots = setNames("vartmp", gsub("02","",datanametmp)))
+    
+  }else{
+    datatmp<-lista_datasets[[datanametmp]]%>%
+      rename(Region=State)%>%
+      mutate(
+        Region=if_else(Region=="","Nacional",as.character(Region))
+      )
+     gathertmp<-datatmp%>%
+      gather(fecha,vartmp,-Country_EN,-Country_ES,-Region)%>%
+      mutate(
+        anio=2000 + year(as.POSIXlt(gsub("X","",fecha), format="%m.%d.%Y")),
+        mes=month(as.POSIXlt(gsub("X","",fecha), format="%m.%d.%Y")),
+        dia=day(as.POSIXlt(gsub("X","",fecha), format="%m.%d.%Y")),
+        fh_amd= 10000*anio + 100*mes + dia
+      )%>%
+      # group_by(fecha,fh_amd)%>%
+      # summarise(
+      #   n=n()
+      # )%>%
+       rename_(.dots = setNames("vartmp", gsub("02","",datanametmp)))
+  }
+  print(
+    gathertmp%>%
+        group_by(fecha,fh_amd)%>%
+        summarise(
+          n=n()
+        )
+  )
+  
+  list_gather[[datanametmp]]<-gathertmp
+  
+  if(i==1){
+    all_gather<-gathertmp%>%
+      select(one_of(c(names(.)[!names(.)%in%c(gsub("02","",datanametmp),"fecha")])),gsub("02","",datanametmp))
+  }else{
+    all_gather<-all_gather%>%
+      inner_join(
+        gathertmp%>%
+          select(one_of(c(names(.)[!names(.)%in%c(gsub("02","",datanametmp),"fecha")])),gsub("02","",datanametmp))
+      )
+  }
+  write.csv(datatmp,paste0("data/",datanametmp,"_pregather.csv"),row.names = F)
+  saveRDS(datatmp,paste0("data/",datanametmp,"_pregather.rds"))
+  saveRDS(gathertmp,paste0("data/gather_",datanametmp,".rds"))
+
+}
+
+  all_gather<-all_gather%>%
+    inner_join(
+      datatotales
+    )
+```
+
+```{r}
+all_gather
+saveRDS(all_gather,"data/contabilizaciones_diarias_x_region.rds")
+```
+
+```{r}
+
+```
+
+
+

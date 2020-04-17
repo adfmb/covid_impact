@@ -1,0 +1,99 @@
+---
+title: "EDA"
+subtitle: "Registros por fecha"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+lista_archivos00<-list.files("data/")
+lista_archivos01<-lista_archivos00[grepl("Dataset",lista_archivos00)]
+lista_datasets<-list()
+for (i in 1:length(lista_archivos01)){
+  # i<-1
+  namefiletmp<-lista_archivos01[i]
+  print(namefiletmp)
+  filetmp<-read.csv(paste0("data/",namefiletmp),header = T)
+  namefiletmp<-gsub("Dataset Data For Hope - A2 - ","",namefiletmp)
+  namefiletmp<-gsub(" ","",namefiletmp)
+  namefiletmp<-gsub("\\*","",namefiletmp)
+  namefiletmp<-gsub(".csv",".rds",namefiletmp)
+  
+  lista_datasets[[sub(".rds","",namefiletmp)]]<-filetmp
+  
+  saveRDS(filetmp,paste0("data/",namefiletmp))
+}
+
+names(lista_datasets)
+```
+
+## Gather de ConfirmadosEstimados
+```{r}
+i<-1
+datanametmp<-names(lista_datasets)[i]
+datatmp<-lista_datasets[[datanametmp]]
+# datatmp[4:ncol(datatmp)]<-lapply(datatmp[4:ncol(datatmp)], function(x){as.numeric(as.character(x))})
+gathertmp<-datatmp%>%
+  gather(fecha,vartmp,-Country_EN,-Country_ES,-Region);gathertmp
+```
+
+- Parece que el *warning* se está generando a partir de la diferencia de clases en los campos de fecha
+
+- Intentarlo, conviertiendo todo a *numeric*
+
+```{r}
+i<-1
+datanametmp<-names(lista_datasets)[i]
+datatmp<-lista_datasets[[datanametmp]]
+datatmp[4:ncol(datatmp)]<-lapply(datatmp[4:ncol(datatmp)], function(x){as.numeric(as.character(x))})
+gathertmp<-datatmp%>%
+  gather(fecha,vartmp,-Country_EN,-Country_ES,-Region);gathertmp
+```
+
+
+- Hay `NA` porque algunas cifras tienen la separación en millares con punto y propicia dos cosas:
+
+    - que las centenas,decenas y unidades las trate como decimales
+    - &
+    - que cuando la cifra mundial llega a millones, aparecen los `NA` porque, al quererlo pasar a numérico, *piensa* que tiene que separar dos veces en *"decimales"*
+
+- Debido a que en esta base de datos no tienen sentido pensar en puntos decimales, ya que son conteos de personas, camas, etc..., se pueden quitar todas las cosas que no sean números antes de convertir los `character` a `numeric`
+
+```{r}
+i<-1
+datanametmp<-names(lista_datasets)[i]
+datatmp<-lista_datasets[[datanametmp]]
+datatmp02<-datatmp%>%
+  mutate(
+    Region=if_else(Region=="","Nacional",as.character(Region))
+  )
+datatmp02[4:ncol(datatmp02)]<-lapply(datatmp02[4:ncol(datatmp02)], function(x){
+  if(is.factor(x)){
+    x<-as.character(x)
+  }
+  if(is.character(x)){
+    # x<-gsub(".","",x) ## para esta base de datos no tienen sentido pensar en puntos decimales
+                      ## ya que son conteos de personas, camas, etc...
+                      ## por lo tanto, los puntos deben corresponder a la separación de millares
+    x<-gsub("\\D+","", x)
+  }
+  return(round(as.numeric(x),0))
+  })
+gathertmp<-datatmp02%>%
+  gather(fecha,vartmp,-Country_EN,-Country_ES,-Region);gathertmp
+
+write.csv(datatmp02,"data/datatmp02.csv",row.names = F)
+```
+
+- Parece que ya quedó
+
+- Haciendo una prueba comparativa con la base original, veo que hay errores en las bases datatmp02 y la original en el drive
+
+- El formato numérico del sheets está perjudicando
+
+- Cambiar el formato a sin separadores y volver a importar
+
