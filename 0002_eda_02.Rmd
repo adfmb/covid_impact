@@ -1,72 +1,200 @@
 ---
-title: "EDA - 01"
-subtitle: "Valores especiales & Tasas - 01"
+title: "EDA - 02"
+subtitle: "Gráfics - 01"
 output: html_notebook
 ---
 
 ```{r}
 library(dplyr)
 library(tidyr)
+library(ggplot2)
+library(plotly)
 ```
 
 ```{r}
-if(!exists("all_gather")){
-  all_gather<-readRDS("data/contabilizaciones_diarias_x_region.rds")
+if(!exists("all_gather02")){
+  all_gather02<-readRDS("data/tasas_diarias_x_region_02.rds")
 }
-all_gather00<-all_gather%>%
+all_gather02%>%
   mutate(
-    mesdia=mes+dia/100
-  )%>%
-  select(-starts_with("Country"),-anio,-mes,-dia,-fh_amd)%>%
-  select(Region,mesdia,one_of(names(.)[!names(.)%in%c("Region","mesdia")]))
-all_gather00
-```
-
-# Valores especiales
-
-```{r}
-all_gather01<-all_gather00%>%
-  mutate_at(
-    vars("ConfirmadosEstimados","CuidadosIntensivos","Fallecidos","Hospitalizados","Recuperados"),
-    function(x){ x[is.na(x)]<- -99; return(x)}
+    mesdia=round(mesdia,2)
   )
-
-sum(is.na(all_gather)); sum(is.na(all_gather01)); sum(all_gather01==-99)
 ```
 
+# Nacionales
 
-# Tasas - 01
-```{r}
-all_gather02<-all_gather01%>%
-  mutate(
-    tasa_conf_tot=if_else(ConfirmadosEstimados!=-99 & !TOTALES%in%c(0,-99),round(ConfirmadosEstimados/TOTALES,4),-99), # Tasa de Infectados
-    
-    
-    tasa_hosp_conf=if_else(Hospitalizados!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Hospitalizados/ConfirmadosEstimados,4),-99), # Tasa de hospitalizados respecto infectados
-    tasa_ci_conf=if_else(CuidadosIntensivos!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(CuidadosIntensivos/ConfirmadosEstimados,4),-99), # Tasa de CI respecto infectados
-    tasa_fall_conf=if_else(Fallecidos!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Fallecidos/ConfirmadosEstimados,4),-99), # Tasa de Fallecidos respecto infectados
-    
-    
-    tasa_ci_hosp=if_else(CuidadosIntensivos!=-99 & !Hospitalizados%in%c(0,-99),round(CuidadosIntensivos/Hospitalizados,4),-99),# Tasa de CI respecto hospitalizados
-    tasa_fall_hosp=if_else(Fallecidos!=-99 & !Hospitalizados%in%c(0,-99),round(Fallecidos/Hospitalizados,4),-99), # Tasa de Fallecidos respecto hospitalizados
-    
-    
-    tasa_fall_ci=if_else(Fallecidos!=-99 & !CuidadosIntensivos%in%c(0,-99),round(Fallecidos/CuidadosIntensivos,4),-99), # Tasa de Fallecidos respecto a puestos en CUIDADOS INTENSIVOS
-    
-    
-    
-    ## Para las siguientes Métricas:
-        ### Si todos los fallecidos se hubiesen HOSPITALIZADO, cuànta capacidad quedaría disponible
-    gap_fall_hosp=if_else(tasa_fall_hosp!=-99,1-tasa_fall_hosp,-99), # Si Positivo: no necesariamente murió por "falta de capacidad" para HOSPITALIZAR; Si Negativo: De haber intentado HOSPITALIZAR A TODOS LOS FALLECIDOS, cuántos se hubiesen quedado sin poder ATENDER en el HOSPITAL
-    
-        ### Si todos los fallecidos se hubiesen puestos en CUIDADOS INTENSUVOS, cuánta capacidad quedaría disponible
-    gap_fall_ci=if_else(tasa_fall_ci!=-99,1-tasa_fall_ci,-99) # Si Positivo: no necesariamente murió por "falta de capacidad" para CI ; Si Negativo: De haber intentado meter a CI A TODOS LOS FALLECIDOS, cuántos se hubiesen quedado sin poder ATENDER en CI
-    
-  )
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"cifras"
+gg00<-ggplot(all_gather02%>%
+               select(-TOTALES,-starts_with("tasa_"),-starts_with("gap_"))%>%
+               filter(Region%in%c("Nacional"))%>%
+               # filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               )%>%
+               gather(metrica,cifras,-Region,-mesdia)%>%
+               filter_(.dots = paste0(vartmp," >= 0")),#paste0(vartmp,"!=-99")), 
+             aes(x=mesdia,colour=metrica,group=1))
 
-all_gather02
-saveRDS(all_gather02,"data/tasas_diarias_x_region_02.rds")
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = "Métricas Nacionales por día")
+)
 ```
 
 
 
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp_x<-"ConfirmadosEstimados"
+vartmp<-"cifras"
+gg00<-ggplot(all_gather02%>%
+               select(-TOTALES,-starts_with("tasa_"),-starts_with("gap_"))%>%
+               filter(Region%in%c("Nacional"))%>%
+               # filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               )%>%
+               gather(metrica,cifras,-one_of(c("Region","mesdia",vartmp_x)))%>%
+               filter_(.dots = paste0(vartmp," >= 0")),#paste0(vartmp,"!=-99")), 
+             aes(colour=metrica,group=1))
+
+ggplotly(
+    gg00 +
+      geom_point(aes_string(x=vartmp_x,y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = "Confirmados (estimados) vs las otras Métricas Nacionales")
+)
+```
+
+# Por Región {.tabset}
+
+## Confirmados vs Hospitalizados, Recuperados, Cuidados Intensivos, Fallecidos
+```{r,fig.width=10,fig.height=10,fig.align='left'}
+vartmp_x<-"ConfirmadosEstimados"
+vartmp<-"cifras"
+gg00<-ggplot(all_gather02%>%
+               select(-TOTALES,-starts_with("tasa_"),-starts_with("gap_"))%>%
+               filter(!Region%in%c("Nacional"))%>%
+               # filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               )%>%
+               gather(metrica,cifras,-one_of(c("Region","mesdia",vartmp_x)))%>%
+               filter_(.dots = paste0(vartmp," >= 0")),#paste0(vartmp,"!=-99")), 
+             aes(colour=metrica,group=1)) +
+  facet_wrap(~Region,scales = "free",nrow = 4) +
+  theme(strip.background = element_blank(), strip.placement = "outside")
+# print(
+ggplotly(
+    gg00 +
+      geom_point(aes_string(x=vartmp_x,y=vartmp)) + 
+      theme_void() + theme(legend.position="none")+
+      labs(title = "Confirmados (estimados) vs las otras Métricas por Región")
+      # theme(axis.text.x = element_text(angle = 90, hjust = 1))
+)
+# )
+```
+
+## Confirmados por dìa & por Región 
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"ConfirmadosEstimados"
+gg00<-ggplot(all_gather02%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+
+## Hospitalizados por dìa & por Región 
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"Hospitalizados"
+gg00<-ggplot(all_gather02%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+
+
+## Recuperados por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"Recuperados"
+gg00<-ggplot(all_gather02%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+
+## Cuidados Intensivos por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"CuidadosIntensivos"
+gg00<-ggplot(all_gather02%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
+
+## Fallecidos por dìa & por Región
+```{r,fig.width=10,fig.height=7,fig.align='left'}
+vartmp<-"Fallecidos"
+gg00<-ggplot(all_gather02%>%
+               filter(!Region%in%c("Nacional"))%>%
+               filter_(.dots = paste0(vartmp," > 0"))%>%#paste0(vartmp,"!=-99"))%>%
+               mutate(
+                 mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+                 Region=as.factor(Region)
+               ), aes(x=mesdia,colour=Region,group=1))
+
+ggplotly(
+    gg00 +
+      geom_line(aes_string(y=vartmp)) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+      labs(title = paste0(vartmp," por día & por Región"))
+)
+```
