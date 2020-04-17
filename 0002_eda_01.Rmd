@@ -45,13 +45,16 @@ all_gather02<-all_gather01%>%
     tasa_hosp_conf=if_else(Hospitalizados!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Hospitalizados/ConfirmadosEstimados,4),-99), # Tasa de hospitalizados respecto infectados
     tasa_ci_conf=if_else(CuidadosIntensivos!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(CuidadosIntensivos/ConfirmadosEstimados,4),-99), # Tasa de CI respecto infectados
     tasa_fall_conf=if_else(Fallecidos!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Fallecidos/ConfirmadosEstimados,4),-99), # Tasa de Fallecidos respecto infectados
+    tasa_recup_conf=if_else(Recuperados!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Recuperados/ConfirmadosEstimados,4),-99), # Tasa de Recuperados respecto a infectados
     
     
     tasa_ci_hosp=if_else(CuidadosIntensivos!=-99 & !Hospitalizados%in%c(0,-99),round(CuidadosIntensivos/Hospitalizados,4),-99),# Tasa de CI respecto hospitalizados
     tasa_fall_hosp=if_else(Fallecidos!=-99 & !Hospitalizados%in%c(0,-99),round(Fallecidos/Hospitalizados,4),-99), # Tasa de Fallecidos respecto hospitalizados
+    tasa_recup_hosp=if_else(Recuperados!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Recuperados/Hospitalizados,4),-99), # Tasa de Recuperados respecto a los hospitalizados
     
     
     tasa_fall_ci=if_else(Fallecidos!=-99 & !CuidadosIntensivos%in%c(0,-99),round(Fallecidos/CuidadosIntensivos,4),-99), # Tasa de Fallecidos respecto a puestos en CUIDADOS INTENSIVOS
+    tasa_recup_ci=if_else(Recuperados!=-99 & !ConfirmadosEstimados%in%c(0,-99),round(Recuperados/CuidadosIntensivos,4),-99), # Tasa de Recuperados respecto a puestos en CUIDADOS INTENSIVOS
     
     
     
@@ -68,5 +71,19 @@ all_gather02
 saveRDS(all_gather02,"data/tasas_diarias_x_region_02.rds")
 ```
 
+- Se construyeron las siguientes métricas:
 
+    - Tasa de Infectados: Confirmados (*estimados*) / Total de población
+    - Tasa de Hospitalizados: Hospitalizados / Confirmados (*estimados*)
+    - Tasa de px en Cuidados Intensivos: Px en CI / Confirmados (*estimados*)
+    - Tasa de Fallecidos: Fallecidos / Confirmados (*estimados*)
+    - Tasa de Recuperados: Recuperados / Confirmados (*estimados*)
+    - Tasa de px en Cuidados Intensivos respecto a Hospitalizados: Px en CI / Hospitalizados
+    - Tasa de Fallecidos respecto a Hospitalizados: Fallecidos / Hospitalizados
+    - Tasa de Recuperados respecto a Hospitalizados: Recuperados / Hospitalizados
+    - Tasa de Fallecidos respecto a px en Cuidados Intensivos: Fallecidos / Px en CI
+    - Tasa de Recuperados respecto a px en Cuidados Intensivos: Recuperados / Px en CI
+    - Gap entre Fallecidos & Hospitalizados: 100% - % de Fallecidos respecto a Hospitalizados
+    - Gap entre Fallecidos & Px en CI: 100% - % de Fallecidos respecto a px en Cuidados Intensivos
+    
 
