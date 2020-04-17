@@ -1,0 +1,141 @@
+---
+title: "EDA - 06"
+subtitle: "Matrices de Incrementos de Riesgo entre Regiones"
+output: html_notebook
+---
+
+```{r,include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(include = T)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+library(DT)
+```
+
+```{r}
+if(!exists("all_gather03")){
+  all_gather03<-readRDS("data/tasas_diarias_x_region_03.rds")
+}
+```
+
+
+
+# Base para transiciones
+
+```{r}
+all_gather04<-all_gather03%>%
+               select(Region,Region00,mesdia,tasa_conf_tot_02,tasa_fall_conf_02,tasa_recup_conf_02)%>%
+  rename(Region_01=Region00)%>%
+  rename(tasa_conf_tot_02_r01=tasa_conf_tot_02)%>%
+  rename(tasa_fall_conf_02_r01=tasa_fall_conf_02)%>%
+  rename(tasa_recup_conf_02_r01=tasa_recup_conf_02)%>%
+  left_join(
+    all_gather03%>%
+      select(Region00,mesdia,tasa_conf_tot_02,tasa_fall_conf_02,tasa_recup_conf_02)%>%
+      rename(Region_02=Region00)%>%
+      rename(tasa_conf_tot_02_r02=tasa_conf_tot_02)%>%
+      rename(tasa_fall_conf_02_r02=tasa_fall_conf_02)%>%
+      rename(tasa_recup_conf_02_r02=tasa_recup_conf_02)
+  )%>%
+  mutate(
+    mesdia=as.factor(as.character.numeric_version(round(mesdia,2))),
+    incr_tasa_conf_tot_0102=if_else(tasa_conf_tot_02_r01!=-99 & tasa_conf_tot_02_r02!=-99,round(tasa_conf_tot_02_r02-tasa_conf_tot_02_r01,4),-99),
+    
+    incr_tasa_fall_conf_0102=if_else(tasa_fall_conf_02_r01!=-99 & tasa_fall_conf_02_r02!=-99,round(tasa_fall_conf_02_r02-tasa_fall_conf_02_r01,4),-99),
+    
+    incr_tasa_recup_conf_0102=if_else(tasa_recup_conf_02_r01!=-99 & tasa_recup_conf_02_r02!=-99,round(tasa_recup_conf_02_r02-tasa_recup_conf_02_r01,4),-99)
+  )
+# saveRDS(all_gather04,"data/tasas_diarias_x_region_04.rds")
+931*19;nrow(all_gather04);datatable(all_gather04[seq(1,10)*(1+seq(1,100)),],
+    extensions = "FixedColumns",
+    options = list(
+      paging = TRUE, searching = TRUE, info = FALSE,
+      sort = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns = 4)
+    ))
+```
+
+# Matrices de Incrementos {.tabset}
+
+
+**Incremento del Riesgo** por pasar de la **Región 1** a la **Región 2** por fecha
+
+
+## En Tasa de Contagios
+```{r}
+all_gather04_sp_conf_tot<-all_gather04%>%
+  # filter(tasa_fall_conf_02_r01>0 & tasa_fall_conf_02_r02>0 & tasa_conf_tot_02_r01>0 & tasa_conf_tot_02_r02>0 & tasa_recup_conf_02_r01>0 & tasa_recup_conf_02_r02>0)%>%
+  select(starts_with("Region"),mesdia,incr_tasa_conf_tot_0102)%>%
+  rename(mes.dia=mesdia)%>%
+  spread(Region_02,incr_tasa_conf_tot_0102)
+
+# saveRDS(all_gather04_sp_conf_tot,"data/incrementos_tasacontagios_tot.rds")
+
+datatable(all_gather04_sp_conf_tot%>%select(-Region),
+    extensions = "FixedColumns",
+    options = list(
+      paging = TRUE, searching = TRUE, info = FALSE,
+      sort = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns = 3)
+    ))
+```
+
+
+## En Tasa de Fallecimientos
+
+```{r}
+all_gather04_sp_fall_conf<-all_gather04%>%
+  select(starts_with("Region"),mesdia,incr_tasa_fall_conf_0102)%>%
+  rename(mes.dia=mesdia)%>%
+  spread(Region_02,incr_tasa_fall_conf_0102)%>%
+
+# saveRDS(all_gather04_sp_fall_conf,"data/incrementos_tasafallecimientos_conf.rds")
+
+datatable(all_gather04_sp_fall_conf%>%select(-Region),
+    extensions = "FixedColumns",
+    options = list(
+      paging = TRUE, searching = TRUE, info = FALSE,
+      sort = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns = 3)
+    ))
+```
+
+
+## En Tasa de Recuperados
+```{r}
+all_gather04_sp_recup_conf<-all_gather04%>%
+  select(starts_with("Region"),mesdia,incr_tasa_recup_conf_0102)%>%
+  rename(mes.dia=mesdia)%>%
+  spread(Region_02,incr_tasa_recup_conf_0102)
+
+# saveRDS(all_gather04_sp_recup_conf,"data/incrementos_tasarecuperados_conf.rds")
+
+datatable(all_gather04_sp_recup_conf%>%select(-Region),
+    extensions = "FixedColumns",
+    options = list(
+      paging = TRUE, searching = TRUE, info = FALSE,
+      sort = TRUE, scrollX = TRUE, fixedColumns = list(leftColumns = 3)
+    ))
+```
+
+
+###
+
+```{r}
+
+```
+
+
+#
+
+```{r}
+
+```
+
+
+<!-- -  -->
+
+<!-- ```{r} -->
+<!-- all_gather04%>% -->
+<!--   filter(Region_01=="Andalucía" & Region_02=="Madrid" & mesdia==3.14) -->
+<!-- ``` -->
+
