@@ -1,6 +1,6 @@
 ---
 title: "EDA - 02"
-subtitle: "Gráfics - 01"
+subtitle: "Gráficas 1era Parte: Absolutos"
 output: html_notebook
 ---
 
